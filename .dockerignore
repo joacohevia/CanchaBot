@@ -1,0 +1,30 @@
+# Maven/Gradle
+target/
+!.mvn/wrapper/maven-wrapper.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs & temp
+*.log
+logs/
+tmp/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (secrets!)
+.env
+*.env
+
+# Frontend (si lo tienes en el mismo repo)
+node_modules/
+frontend/
+dist/
