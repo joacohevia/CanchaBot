@@ -1,50 +1,29 @@
-# =================================================================
-# Stage 1: Build the application with Maven
-# =================================================================
+# Stage 1: Build
 FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
-
 WORKDIR /app
-
-# Copy Maven wrapper and pom.xml first for dependency caching
-COPY pom.xml .
-COPY .mvn ./.mvn
-COPY mvnw .
-
-# Make wrapper executable and download dependencies (cached if pom.xml unchanged)
+COPY pom.xml .mvn ./mvnw ./
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
-
-# Copy source code and build the application
 COPY src ./src
-
-# Package the application (skip tests for faster builds in CI/CD)
 RUN ./mvnw clean package -DskipTests -B
 
-# =================================================================
-# Stage 2: Create the lightweight runtime image
-# =================================================================
+# Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
-
-# Install necessary packages for Telegram bot (native libraries)
-# openssl is needed for SSL/TLS connections
 RUN apk add --no-cache openssl
-
 WORKDIR /app
-
-# Copy the built JAR from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose the port (Render will override with $PORT env var)
+# Render usa $PORT, local usa 8081
 ENV PORT=8081
-EXPOSE $PORT
+EXPOSE 8081
 
-# Health check endpoint (if you have spring-boot-actuator)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:$PORT/actuator/health || exit 1
+# JVM flags compatibles con Alpine:
+# -XX:+UseContainerSupport → detecta límites de memoria del contenedor
+# -XX:MaxRAMPercentage=75.0 → usa 75% de RAM disponible para heap
+# Render a veces inyecta JAVA_TOOL_OPTIONS con flags no compatibles con Alpine.
+# Lo limpiamos para evitar errores de JVM.
+ENV JAVA_TOOL_OPTIONS=""
 
-# Run the application
-# -XX:+UseContainerResource: Enable JVM to respect container memory limits
-# -XX:MaxRAMPercentage=75.0: Use 75% of available memory for heap (important for 512MB free tier)
 ENTRYPOINT ["java", \
-  "-XX:+UseContainerResource", \
+  "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \
   "-jar", "app.jar"]
