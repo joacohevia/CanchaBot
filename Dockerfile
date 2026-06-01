@@ -1,21 +1,29 @@
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
+# Etapa 1: Construcción
+FROM eclipse-temurin:17-alpine AS builder
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-COPY src ./src
-RUN mvn clean package -DskipTests -B
 
+COPY . .
+
+# 1. Dar permisos de ejecución al wrapper de Maven
+RUN chmod +x ./mvnw
+
+# 2. Compilar el proyecto (asegúrate de que tu proyecto no requiera red para descargar deps en este paso)
+RUN ./mvnw clean package -DskipTests
+
+# Etapa 2: Ejecución (Runtime)
 FROM eclipse-temurin:17-jre-alpine
-RUN apk add --no-cache openssl
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
 
-ENV PORT=8081
+# 3. Copiar el JAR con el nombre EXACTO que genera tu pom.xml (artifactId-version.jar)
+COPY --from=builder /app/target/ChatBot-0.0.1-SNAPSHOT.jar app.jar
+
+# 4. Variables de entorno correctas para Spring Boot
+# SERVER_PORT hace que Spring escuche en el puerto 8081
+ENV SERVER_PORT=8081
+# JAVA_OPTS para optimizar memoria en contenedores (evita OOMKill)
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
 EXPOSE 8081
 
-ENV JAVA_TOOL_OPTIONS=""
-
-ENTRYPOINT ["java", \
-  "-XX:+UseContainerSupport", \
-  "-XX:MaxRAMPercentage=75.0", \
-  "-jar", "app.jar"]
+# 5. Comando de entrada optimizado
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

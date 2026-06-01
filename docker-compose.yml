@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  chatbot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatbot-container
+    ports:
+      # ✅ Sintaxis correcta: ${VAR:-default} para Docker Compose
+      - "${SERVER_PORT:-8081}:${SERVER_PORT:-8081}"
+    environment:
+      # ========================
+      # BASE DE DATOS - SUPABASE
+      # ========================
+      # Usamos variables del .env para no hardcodear credenciales
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?prepareThreshold=0}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres.rsucipnybeooqiwreuyh}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+
+      # ========================
+      # JPA / HIBERNATE
+      # ========================
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      - SPRING_JPA_SHOW_SQL=${SPRING_JPA_SHOW_SQL:-true}
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL=${SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL:-true}
+
+      # ========================
+      # IA - DEEPSEEK
+      # ========================
+      - IA_API_URL=${IA_API_URL:-https://api.deepseek.com/v1/chat/completions}
+      - IA_API_KEY=${API_KEY_DEEPSEEK}
+      - IA_MODEL=${IA_MODEL:-deepseek-v4-flash}
+
+      # ========================
+      # CANCHAS - Configuración
+      # ========================
+      - CANCHAS_HORARIO_INICIO=${CANCHAS_HORARIO_INICIO:-08:00}
+      - CANCHAS_HORARIO_FIN=${CANCHAS_HORARIO_FIN:-23:00}
+      - CANCHAS_TURNO_DURACION_MINUTOS=${CANCHAS_TURNO_DURACION_MINUTOS:-60}
+
+      # ========================
+      # TELEGRAM BOT
+      # ========================
+      - TELEGRAM_BOT_TOKEN=${API_KEY_BOT}
+      - TELEGRAM_BOT_USERNAME=${NOMBRE_BOT}
+
+      # ========================
+      # SERVER & JVM
+      # ========================
+      - SERVER_PORT=${SERVER_PORT:-8081}
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    extra_hosts:
+      # ✅ Necesario en Linux para conectar con servicios del host (Ollama)
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      # ✅ Healthcheck usando la variable SERVER_PORT
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:${SERVER_PORT:-8081}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s  # ✅ Tiempo extra para que Spring arranque
+    networks:
+      - chatbot-network
+
+networks:
+  chatbot-network:
+    driver: bridge
