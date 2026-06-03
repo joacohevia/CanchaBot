@@ -98,11 +98,16 @@ public class ReservaBusinessService {
      * @throws IllegalStateException    si el turno ya estaba cancelado
      */
     @Transactional
-    public void cancelar(Long turnoId) {
+    public void cancelar(Long turnoId,LocalDate fecha, LocalTime horaInicio) {
         Turno turno = turnoRepository.findById(turnoId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No se encontro el turno con ID " + turnoId));
 
+        // 2. No permitir cancelar en el pasado
+        LocalDateTime fechaHoraReserva = LocalDateTime.of(fecha, horaInicio);
+        if (fechaHoraReserva.isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("No se puede cancelar en el pasado. La fecha y hora ya pasaron.");
+        }
         if ("cancelado".equalsIgnoreCase(turno.getEstado())) {
             throw new IllegalStateException(
                     "El turno " + turnoId + " ya estaba cancelado.");

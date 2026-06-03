@@ -60,7 +60,7 @@ public class IntentDetector {
 
         // ── Ubicación ──
         if (contieneAlguna(m, "ubicacion", "direccion", "donde queda", "donde estan",
-                "como llegar", "mapa")) {
+                "como llegar", "mapa","cual es la direccion","donde esta ubicado","cual es la ubicacion")) {
             return Intencion.UBICACION;
         }
 

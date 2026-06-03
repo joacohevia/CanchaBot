@@ -200,3 +200,6 @@ Loop 5:
 | ORM | Hibernate / Spring Data JPA |
 | Mensajería | Telegram Bots API |
 | Build | Maven |
+
+## URL prueba
+https://canchabot.onrender.com/api/chat/health

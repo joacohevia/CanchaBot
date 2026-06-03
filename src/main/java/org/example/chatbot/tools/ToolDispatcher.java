@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -155,13 +156,19 @@ public class ToolDispatcher {
         try {
             Object idObj = args.get("turno_id");
             if (idObj == null) return ToolResult.error("Falta el ID del turno.");
+            String fechaStr    = (String) args.get("fecha");
+            String horaInicio  = (String) args.get("hora_inicio");
+            LocalDate fecha = LocalDate.parse(fechaStr);
+            LocalTime inicio = LocalTime.parse(horaInicio);
 
             long turnoId = ((Number) idObj).longValue();
-            reservaBusiness.cancelar(turnoId);
+            reservaBusiness.cancelar(turnoId,fecha,inicio);
 
             log.info("[Tool] Turno cancelado id={}", turnoId);
             return ToolResult.ok("Turno " + turnoId + " cancelado correctamente.");
 
+        }catch (DateTimeParseException e) {
+            return ToolResult.error("Formato de fecha/hora invalido.");
         } catch (IllegalArgumentException e) {
             return ToolResult.error(e.getMessage());
         } catch (IllegalStateException e) {
